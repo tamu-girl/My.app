@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>پنل ادمین</title>
+  <style>
+    body { font-family: Tahoma; padding:15px; background:#eef2f7; }
+    h2 { text-align:center; }
+    .box { background:#fff; padding:20px; border-radius:12px;
+           border:2px dashed #b0bec5; margin:30px auto; max-width:400px; }
+    input, button { width:100%; padding:10px; margin:6px 0;
+                    border-radius:6px; border:1px solid #ccc; font-size:15px; }
+    button { background:#2980b9; color:#fff; border:none; }
+    .msg { text-align:center; color:red; margin-top:8px; }
+    .product { background:#fff; padding:12px; margin:8px 0;
+               border-radius:10px; display:flex;
+               justify-content:space-between; align-items:center; }
+    .danger { background:#e74c3c; padding:6px 12px; width:auto; }
+  </style>
+</head>
+<body>
+
+  <div id="loginBox" class="box">
+    <h2>🔐 ورود ادمین</h2>
+    <input id="password" type="password" placeholder="رمز عبور">
+    <button onclick="login()">ورود</button>
+    <p id="loginMsg" class="msg"></p>
+  </div>
+
+  <div id="panel" style="display:none">
+    <h2>⚙️ مدیریت محصولات</h2>
+    <input id="pName" placeholder="نام محصول">
+    <input id="pPrice" type="number" placeholder="قیمت">
+    <button onclick="addProduct()" style="background:#27ae60">افزودن</button>
+    <button onclick="logout()" style="background:#95a5a6">خروج</button>
+    <div id="list" style="margin-top:15px"></div>
+  </div>
+
+  <script>
+    let adminPassword = '';
+
+    async function login() {
+      const password = document.getElementById('password').value;
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      const data = await res.json();
+
+      if (data.ok) {
+        adminPassword = password;
+        document.getElementById('loginBox').style.display = 'none';
+        document.getElementById('panel').style.display = 'block';
+        loadProducts();
+      } else {
+        document.getElementById('loginMsg').textContent = data.message;
+      }
+    }
+
+    function logout() { location.reload(); }
+
+    async function loadProducts() {
+      const res = await fetch('/api/products');
+      const products = await res.json();
+      document.getElementById('list').innerHTML = products.map(p => `
+        <div class="product">
+          <span>${p.name} — ${p.price.toLocaleString('fa-IR')} تومان</span>
+          <button class="danger" onclick="removeProduct(${p.id})">حذف</button>
+        </div>
+      `).join('');
+    }
+
+    async function addProduct() {
+      const name = document.getElementById('pName').value.trim();
+      const price = document.getElementById('pPrice').value.trim();
+      if (!name || !price) return;
+
+      await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: adminPassword, name, price })
+      });
+      document.getElementById('pName').value = '';
+      document.getElementById('pPrice').value = '';
+      loadProducts();
+    }
+
+    async function removeProduct(id) {
+      await fetch('/api/products/' + id, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: adminPassword })
+      });
+      loadProducts();
+    }
+  </script>
+</body>
+</html>
+      
